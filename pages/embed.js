@@ -8,8 +8,11 @@ import morph from 'morphmorph'
 // Ours
 import { StylesheetLink, CodeMirrorLink, MetaTags } from '../components/Meta'
 import Carbon from '../components/Carbon'
+import GistWrapper from '../components/GistWrapper'
 import { DEFAULT_CODE, DEFAULT_SETTINGS } from '../lib/constants'
 import { getQueryStringState } from '../lib/routing'
+import { escapeHtml } from '../lib/util'
+import api from '../lib/api'
 
 const isInIFrame = morph.get('parent.window.parent')
 const getParent = win => {
@@ -54,9 +57,11 @@ class Embed extends React.Component {
 
   componentDidMount() {
     const { asPath = '' } = this.props.router
-    const { query } = url.parse(asPath, true)
+    const { query, pathname } = url.parse(asPath, true)
     const queryParams = getQueryStringState(query)
     const initialState = Object.keys(queryParams).length ? queryParams : {}
+
+    this.path = escapeHtml(pathname.split('/').pop())
 
     this.setState(
       {
@@ -100,15 +105,21 @@ class Embed extends React.Component {
     return (
       <Page theme={this.state.theme}>
         {this.state.mounted && (
-          <Carbon
-            ref={this.ref}
-            config={this.state}
-            readOnly={this.state.readOnly}
-            copyable={this.state.copyable}
-            onChange={this.updateCode}
+          <GistWrapper
+            path={this.path}
+            getGist={api.getGist}
+            onChange={({ code, language }) => this.setState({ code, language })}
           >
-            {this.state.code}
-          </Carbon>
+            <Carbon
+              ref={this.ref}
+              config={this.state}
+              readOnly={this.state.readOnly}
+              copyable={this.state.copyable}
+              onChange={this.updateCode}
+            >
+              {this.state.code}
+            </Carbon>
+          </GistWrapper>
         )}
       </Page>
     )

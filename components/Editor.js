@@ -14,6 +14,7 @@ import Carbon from './Carbon'
 import ExportMenu from './ExportMenu'
 import Themes from './Themes'
 import TweetButton from './TweetButton'
+import GistWrapper from './GistWrapper'
 import {
   LANGUAGES,
   LANGUAGE_MIME_HASH,
@@ -60,22 +61,10 @@ class Editor extends React.Component {
   async componentDidMount() {
     const { asPath = '' } = this.props.router
     const { query, pathname } = url.parse(asPath, true)
-    const path = escapeHtml(pathname.split('/').pop())
     const queryParams = getQueryStringState(query)
     const initialState = Object.keys(queryParams).length ? queryParams : {}
-    try {
-      // TODO fix this hack
-      if (this.props.api.getGist && path.length >= 19 && path.indexOf('.') === -1) {
-        const { content, language } = await this.props.api.getGist(path)
-        if (language) {
-          initialState.language = language.toLowerCase()
-        }
-        initialState.code = content
-      }
-    } catch (e) {
-      // eslint-disable-next-line
-      console.log(e)
-    }
+
+    this.path = escapeHtml(pathname.split('/').pop())
 
     const newState = {
       // Load from localStorage
@@ -333,19 +322,25 @@ class Editor extends React.Component {
                 isOver={canDrop}
                 title={`Drop your file here to import ${canDrop ? '✋' : '✊'}`}
               >
-                {/*key ensures Carbon's internal language state is updated when it's changed by Dropdown*/}
-                <Carbon
-                  key={language}
-                  ref={this.carbonNode}
-                  config={this.state}
-                  onChange={this.updateCode}
-                  onAspectRatioChange={this.updateAspectRatio}
-                  titleBar={titleBar}
-                  updateTitleBar={this.updateTitleBar}
-                  loading={this.state.loading}
+                <GistWrapper
+                  path={this.path}
+                  getGist={this.props.api.getGist}
+                  onChange={({ code, language }) => this.setState({ code, language })}
                 >
-                  {code != null ? code : DEFAULT_CODE}
-                </Carbon>
+                  {/*key ensures Carbon's internal language state is updated when it's changed by Dropdown*/}
+                  <Carbon
+                    key={language}
+                    ref={this.carbonNode}
+                    config={this.state}
+                    onChange={this.updateCode}
+                    onAspectRatioChange={this.updateAspectRatio}
+                    titleBar={titleBar}
+                    updateTitleBar={this.updateTitleBar}
+                    loading={this.state.loading}
+                  >
+                    {code != null ? code : DEFAULT_CODE}
+                  </Carbon>
+                </GistWrapper>
               </Overlay>
             )}
           </Dropzone>
